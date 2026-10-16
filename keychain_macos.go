@@ -208,11 +208,13 @@ func (k *keychain) Set(item Item) error {
 	isTrusted := k.isTrusted && !item.KeychainNotTrustApplication
 
 	if isTrusted {
-		debugf("Keychain item trusts keyring")
-		kcItem.SetAccess(&gokeychain.Access{
-			Label:               item.Label,
-			TrustedApplications: nil,
-		})
+		// Do not set an explicit SecAccess here: SecAccessCreate with an empty
+		// trusted-applications list creates an ACL that requires a user
+		// authorization prompt on every access, which fails with errSecAuthFailed
+		// (-25308) in non-interactive sessions (e.g. over SSH). Letting AddItem
+		// create the item's default ACL implicitly trusts the creating
+		// application, which is what KeychainTrustApplication intends.
+		debugf("Keychain item trusts keyring (default ACL)")
 	} else {
 		debugf("Keychain item doesn't trust keyring")
 		kcItem.SetAccess(&gokeychain.Access{
